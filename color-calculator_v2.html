@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive Color Path Generator</title>
+  <style>
+    /* Apple HIG-inspired styling */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f5f5f7;
+      margin: 0;
+      padding: 20px;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    h1 {
+      text-align: center;
+      color: #000;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+    .controls {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      margin-bottom: 24px;
+    }
+    .control-group {
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .control-group label {
+      flex: 0 0 140px;
+      font-weight: 400;
+      margin-bottom: 5px;
+    }
+    .control-group input[type="number"],
+    .control-group input[type="color"],
+    .control-group input[type="text"] {
+      margin-right: 10px;
+      padding: 4px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    .hex-preview {
+      width: 24px;
+      height: 24px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    button {
+      background-color: #007aff;
+      color: #fff;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      width: 100%;
+      transition: background-color 0.2s ease;
+    }
+    button:hover {
+      background-color: #0051a8;
+    }
+    .visualization {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      overflow-x: auto;
+    }
+    .path-container {
+      display: flex;
+      align-items: center;
+      padding: 20px 0;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .player {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      margin: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: #000;
+      border: 1px solid #333;
+      position: relative;
+      flex-shrink: 0;
+      transition: background-color 0.3s ease;
+    }
+    .platform {
+      width: 80px;
+      height: 68px;
+      border-radius: 8px;
+      margin: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      border: 1px solid #333;
+      position: relative;
+      flex-shrink: 0;
+      transition: background-color 0.3s ease;
+    }
+    .arrow {
+      width: 24px;
+      height: 20px;
+      position: relative;
+      flex-shrink: 0;
+      margin: 10px;
+    }
+    .arrow::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background-color: #333;
+      transform: translateY(-50%);
+    }
+    .arrow::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: 0;
+      width: 10px;
+      height: 10px;
+      border-top: 2px solid #333;
+      border-right: 2px solid #333;
+      transform: translateY(-50%) rotate(45deg);
+    }
+    .label {
+      position: absolute;
+      bottom: -25px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 12px;
+    }
+    .color-values {
+      font-size: 10px;
+      margin-top: 5px;
+      text-align: center;
+    }
+    .formula-container {
+      background-color: #f5f5f7;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 20px;
+      text-align: center;
+    }
+    .formula-title {
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .formula {
+      margin: 8px 0;
+      text-align: center;
+      color: #666668;
+      font-size: 14px;
+    }
+    @media (max-width: 600px) {
+      .control-group {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .control-group label {
+        flex: none;
+        margin-bottom: 5px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Interactive Color Path Generator</h1>
+  
+  <div class="controls">
+    <div class="control-group">
+      <label for="startColor">Starting Color:</label>
+      <input type="color" id="startColorPicker" value="#ffffff">
+      <input type="text" id="startColorHex" value="#ffffff">
+      <div class="hex-preview" id="startHexPreview" style="background-color: #ffffff;"></div>
+    </div>
+    
+    <div class="control-group">
+      <label for="blendRatio">Blend Ratio:</label>
+      <input type="number" id="blendRatio" min="0.01" max="1" step="0.01" value="0.2">
+      <span>(0.01-1.00)</span>
+    </div>
+    
+    <div class="control-group">
+      <label for="numPlatforms">Number of Platforms:</label>
+      <input type="number" id="numPlatforms" min="1" max="10" step="1" value="3">
+      <span>(1-10)</span>
+    </div>
+    
+    <div class="control-group">
+      <label for="targetColor">Target Color:</label>
+      <input type="color" id="targetColorPicker" value="#ff0000">
+      <input type="text" id="targetColorHex" value="#ff0000">
+      <div class="hex-preview" id="hexPreview" style="background-color: #ff0000;"></div>
+    </div>
+    
+    <button id="generateBtn">Generate Color Path</button>
+  </div>
+  
+  <div class="visualization">
+    <div class="path-container" id="pathContainer">
+      <!-- Visualization will be generated here -->
+    </div>
+    
+    <div class="formula-container">
+      <div class="formula-title">Platform Color Calculation</div>
+      <div class="formula">1. Define target color and number of steps (n)</div>
+      <div class="formula">2. For each step i: Calculate Cᵢ = LERP(start, target, i/n)</div>
+      <div class="formula">3. Calculate platform color: Bᵢ = (Cᵢ - (1-r)·Cᵢ₋₁)/r</div>
+    </div>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const startColorPicker = document.getElementById('startColorPicker');
+      const startColorHex = document.getElementById('startColorHex');
+      const startHexPreview = document.getElementById('startHexPreview');
+      const blendRatioInput = document.getElementById('blendRatio');
+      const numPlatformsInput = document.getElementById('numPlatforms');
+      const targetColorPicker = document.getElementById('targetColorPicker');
+      const targetColorHex = document.getElementById('targetColorHex');
+      const hexPreview = document.getElementById('hexPreview');
+      const generateBtn = document.getElementById('generateBtn');
+      const pathContainer = document.getElementById('pathContainer');
+      
+      // Synchronize starting color picker and hex input
+      startColorPicker.addEventListener('input', function() {
+        startColorHex.value = startColorPicker.value;
+        startHexPreview.style.backgroundColor = startColorPicker.value;
+      });
+      
+      startColorHex.addEventListener('input', function() {
+        if (!startColorHex.value.startsWith('#')) {
+          startColorHex.value = '#' + startColorHex.value;
+        }
+        if (/^#[0-9A-Fa-f]{6}$/.test(startColorHex.value)) {
+          startColorPicker.value = startColorHex.value;
+          startHexPreview.style.backgroundColor = startColorHex.value;
+        }
+      });
+      
+      // Synchronize target color picker and hex input
+      targetColorPicker.addEventListener('input', function() {
+        targetColorHex.value = targetColorPicker.value;
+        hexPreview.style.backgroundColor = targetColorPicker.value;
+      });
+      
+      targetColorHex.addEventListener('input', function() {
+        if (!targetColorHex.value.startsWith('#')) {
+          targetColorHex.value = '#' + targetColorHex.value;
+        }
+        if (/^#[0-9A-Fa-f]{6}$/.test(targetColorHex.value)) {
+          targetColorPicker.value = targetColorHex.value;
+          hexPreview.style.backgroundColor = targetColorHex.value;
+        }
+      });
+      
+      generateBtn.addEventListener('click', generateColorPath);
+      
+      // Add event listener for Enter key
+      document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+          generateColorPath();
+        }
+      });
+      
+      // Generate initial path
+      generateColorPath();
+      
+      function generateColorPath() {
+        const blendRatio = parseFloat(blendRatioInput.value);
+        const numPlatforms = parseInt(numPlatformsInput.value);
+        const startColor = hexToRgb(startColorPicker.value);
+        const targetColor = hexToRgb(targetColorPicker.value);
+        
+        if (blendRatio < 0.01 || blendRatio > 1) {
+          alert('Blend ratio must be between 0.01 and 1.00');
+          return;
+        }
+        if (numPlatforms < 1 || numPlatforms > 10) {
+          alert('Number of platforms must be between 1 and 10');
+          return;
+        }
+        
+        pathContainer.innerHTML = '';
+        addPlayer(startColor, 'C₀', true);
+        let previousColor = startColor;
+        
+        for (let i = 1; i <= numPlatforms; i++) {
+          const t = i / numPlatforms;
+          const desiredColor = lerpColor(startColor, targetColor, t);
+          const platformColor = solvePlatformColor(previousColor, desiredColor, blendRatio);
+          
+          addArrow();
+          addPlatform(platformColor, `B${i}`);
+          addArrow();
+          addPlayer(desiredColor, `C${i}`, i === numPlatforms);
+          
+          previousColor = desiredColor;
+        }
+      }
+      
+      function addPlayer(color, label, isEndpoint) {
+        const playerDiv = document.createElement('div');
+        playerDiv.className = 'player';
+        playerDiv.style.backgroundColor = rgbToHex(color);
+        
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'label';
+        labelDiv.textContent = label;
+        playerDiv.appendChild(labelDiv);
+        
+        const colorValues = document.createElement('div');
+        colorValues.className = 'color-values';
+        colorValues.textContent = `${Math.round(color.r)},${Math.round(color.g)},${Math.round(color.b)}`;
+        playerDiv.appendChild(colorValues);
+        
+        if (isEndpoint) {
+          playerDiv.style.borderWidth = '3px';
+        }
+        
+        pathContainer.appendChild(playerDiv);
+      }
+      
+      function addPlatform(color, label) {
+        const platformDiv = document.createElement('div');
+        platformDiv.className = 'platform';
+        platformDiv.style.backgroundColor = rgbToHex(color);
+        
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'label';
+        labelDiv.textContent = label;
+        platformDiv.appendChild(labelDiv);
+        
+        const colorValues = document.createElement('div');
+        colorValues.className = 'color-values';
+        colorValues.textContent = `${Math.round(color.r)},${Math.round(color.g)},${Math.round(color.b)}`;
+        platformDiv.appendChild(colorValues);
+        
+        pathContainer.appendChild(platformDiv);
+      }
+      
+      function addArrow() {
+        const arrowDiv = document.createElement('div');
+        arrowDiv.className = 'arrow';
+        pathContainer.appendChild(arrowDiv);
+      }
+      
+      function hexToRgb(hex) {
+        hex = hex.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        return { r, g, b };
+      }
+      
+      function rgbToHex(rgb) {
+        const r = Math.max(0, Math.min(255, Math.round(rgb.r)));
+        const g = Math.max(0, Math.min(255, Math.round(rgb.g)));
+        const b = Math.max(0, Math.min(255, Math.round(rgb.b)));
+        const hexR = r.toString(16).padStart(2, '0');
+        const hexG = g.toString(16).padStart(2, '0');
+        const hexB = b.toString(16).padStart(2, '0');
+        return `#${hexR}${hexG}${hexB}`;
+      }
+      
+      function lerpColor(color1, color2, t) {
+        return {
+          r: color1.r + t * (color2.r - color1.r),
+          g: color1.g + t * (color2.g - color1.g),
+          b: color1.b + t * (color2.b - color1.b)
+        };
+      }
+      
+      function solvePlatformColor(prevColor, desiredColor, r) {
+        if (r < 0.01) return desiredColor;
+        const R = Math.min(255, Math.max(0, (desiredColor.r - (1 - r) * prevColor.r) / r));
+        const G = Math.min(255, Math.max(0, (desiredColor.g - (1 - r) * prevColor.g) / r));
+        const B = Math.min(255, Math.max(0, (desiredColor.b - (1 - r) * prevColor.b) / r));
+        return { r: R, g: G, b: B };
+      }
+    });
+  </script><script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const startColorPicker = document.getElementById('startColorPicker');
+    const startColorHex = document.getElementById('startColorHex');
+    const startHexPreview = document.getElementById('startHexPreview');
+    const blendRatioInput = document.getElementById('blendRatio');
+    const numPlatformsInput = document.getElementById('numPlatforms');
+    const targetColorPicker = document.getElementById('targetColorPicker');
+    const targetColorHex = document.getElementById('targetColorHex');
+    const hexPreview = document.getElementById('hexPreview');
+    const generateBtn = document.getElementById('generateBtn');
+    const pathContainer = document.getElementById('pathContainer');
+    
+    // Synchronize starting color picker and hex input
+    startColorPicker.addEventListener('input', function() {
+      startColorHex.value = startColorPicker.value;
+      startHexPreview.style.backgroundColor = startColorPicker.value;
+    });
+    
+    startColorHex.addEventListener('input', function() {
+      if (!startColorHex.value.startsWith('#')) {
+        startColorHex.value = '#' + startColorHex.value;
+      }
+      if (/^#[0-9A-Fa-f]{6}$/.test(startColorHex.value)) {
+        startColorPicker.value = startColorHex.value;
+        startHexPreview.style.backgroundColor = startColorHex.value;
+      }
+    });
+    
+    // Synchronize target color picker and hex input
+    targetColorPicker.addEventListener('input', function() {
+      targetColorHex.value = targetColorPicker.value;
+      hexPreview.style.backgroundColor = targetColorPicker.value;
+    });
+    
+    targetColorHex.addEventListener('input', function() {
+      if (!targetColorHex.value.startsWith('#')) {
+        targetColorHex.value = '#' + targetColorHex.value;
+      }
+      if (/^#[0-9A-Fa-f]{6}$/.test(targetColorHex.value)) {
+        targetColorPicker.value = targetColorHex.value;
+        hexPreview.style.backgroundColor = targetColorHex.value;
+      }
+    });
+    
+    generateBtn.addEventListener('click', generateColorPath);
+    
+    // Add event listener for Enter key
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {
+        generateColorPath();
+      }
+    });
+    
+    // Generate initial path
+    generateColorPath();
+    
+    function generateColorPath() {
+      const blendRatio = parseFloat(blendRatioInput.value);
+      const numPlatforms = parseInt(numPlatformsInput.value);
+      const startColor = hexToRgb(startColorPicker.value);
+      const targetColor = hexToRgb(targetColorPicker.value);
+      
+      if (blendRatio < 0.01 || blendRatio > 1) {
+        alert('Blend ratio must be between 0.01 and 1.00');
+        return;
+      }
+      if (numPlatforms < 1 || numPlatforms > 10) {
+        alert('Number of platforms must be between 1 and 10');
+        return;
+      }
+      
+      pathContainer.innerHTML = '';
+      addPlayer(startColor, 'C₀', true);
+      let previousColor = startColor;
+      
+      for (let i = 1; i <= numPlatforms; i++) {
+        const t = i / numPlatforms;
+        const desiredColor = lerpColor(startColor, targetColor, t);
+        const platformColor = solvePlatformColor(previousColor, desiredColor, blendRatio);
+        
+        addArrow();
+        addPlatform(platformColor, `B${i}`);
+        addArrow();
+        addPlayer(desiredColor, `C${i}`, i === numPlatforms);
+        
+        previousColor = desiredColor;
+      }
+    }
+    
+    function addPlayer(color, label, isEndpoint) {
+      const playerDiv = document.createElement('div');
+      playerDiv.className = 'player';
+      playerDiv.style.backgroundColor = rgbToHex(color);
+      
+      const labelDiv = document.createElement('div');
+      labelDiv.className = 'label';
+      labelDiv.textContent = label;
+      playerDiv.appendChild(labelDiv);
+      
+      const colorValues = document.createElement('div');
+      colorValues.className = 'color-values';
+      colorValues.textContent = `${Math.round(color.r)},${Math.round(color.g)},${Math.round(color.b)}`;
+      playerDiv.appendChild(colorValues);
+      
+      if (isEndpoint) {
+        playerDiv.style.borderWidth = '3px';
+      }
+      
+      pathContainer.appendChild(playerDiv);
+    }
+    
+    function addPlatform(color, label) {
+      const platformDiv = document.createElement('div');
+      platformDiv.className = 'platform';
+      platformDiv.style.backgroundColor = rgbToHex(color);
+      
+      const labelDiv = document.createElement('div');
+      labelDiv.className = 'label';
+      labelDiv.textContent = label;
+      platformDiv.appendChild(labelDiv);
+      
+      const colorValues = document.createElement('div');
+      colorValues.className = 'color-values';
+      colorValues.textContent = `${Math.round(color.r)},${Math.round(color.g)},${Math.round(color.b)}`;
+      platformDiv.appendChild(colorValues);
+      
+      pathContainer.appendChild(platformDiv);
+    }
+    
+    function addArrow() {
+      const arrowDiv = document.createElement('div');
+      arrowDiv.className = 'arrow';
+      pathContainer.appendChild(arrowDiv);
+    }
+    
+    function hexToRgb(hex) {
+      hex = hex.replace('#', '');
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      return { r, g, b };
+    }
+    
+    function rgbToHex(rgb) {
+      const r = Math.max(0, Math.min(255, Math.round(rgb.r)));
+      const g = Math.max(0, Math.min(255, Math.round(rgb.g)));
+      const b = Math.max(0, Math.min(255, Math.round(rgb.b)));
+      const hexR = r.toString(16).padStart(2, '0');
+      const hexG = g.toString(16).padStart(2, '0');
+      const hexB = b.toString(16).padStart(2, '0');
+      return `#${hexR}${hexG}${hexB}`;
+    }
+    
+    function lerpColor(color1, color2, t) {
+      return {
+        r: color1.r + t * (color2.r - color1.r),
+        g: color1.g + t * (color2.g - color1.g),
+        b: color1.b + t * (color2.b - color1.b)
+      };
+    }
+    
+    function solvePlatformColor(prevColor, desiredColor, r) {
+      if (r < 0.01) return desiredColor;
+      const R = Math.min(255, Math.max(0, (desiredColor.r - (1 - r) * prevColor.r) / r));
+      const G = Math.min(255, Math.max(0, (desiredColor.g - (1 - r) * prevColor.g) / r));
+      const B = Math.min(255, Math.max(0, (desiredColor.b - (1 - r) * prevColor.b) / r));
+      return { r: R, g: G, b: B };
+    }
+  });
+</script>
+</body>
+</html>
